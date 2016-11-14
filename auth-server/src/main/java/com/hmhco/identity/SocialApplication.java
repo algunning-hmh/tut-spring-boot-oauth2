@@ -1,19 +1,4 @@
-/*
- * Copyright 2012-2015 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.example;
+package com.hmhco.identity;
 
 import java.security.Principal;
 import java.util.ArrayList;
@@ -40,7 +25,6 @@ import org.springframework.security.oauth2.client.OAuth2ClientContext;
 import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 import org.springframework.security.oauth2.client.filter.OAuth2ClientAuthenticationProcessingFilter;
 import org.springframework.security.oauth2.client.filter.OAuth2ClientContextFilter;
-import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;
@@ -59,19 +43,42 @@ import org.springframework.web.filter.CompositeFilter;
 @EnableAuthorizationServer
 @Order(6)
 public class SocialApplication extends WebSecurityConfigurerAdapter {
+	/*
+	* The @EnableResourceServer annotation creates a security filter with @Order(3) by default,
+	* so by moving the main application security to @Order(6)
+	* we ensure that the rule for "/me" takes precedence.
+	* */
 
 	@Autowired
 	OAuth2ClientContext oauth2ClientContext;
 
 	@RequestMapping({ "/user", "/me" })
 	public Map<String, String> user(Principal principal) {
+		/*	So far we have a /user endpoint, and it is secured with cookies created when the user authenticates.
+			To secure /user endpoint in addition with the access tokens granted locally we can just re-use the existing
+			endpoint and make an alias to it on a new path:
+		*/
+
+		/*
+		* Converted the Principal into a Map so as to hide the parts that we don’t want to expose to the browser,
+		 * and also to unify the behaviour of the endpoint between the two external authentication providers.
+		 * In principle we could add more detail here, like a provider-specific unique identifier for instance,
+		 * or an e-mail address if it’s available.
+		* */
+
 		Map<String, String> map = new LinkedHashMap<>();
 		map.put("name", principal.getName());
 		return map;
 	}
 
+
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
+		/* 	1. All requests are protected by default
+			2. The home page and login endpoints are explicitly excluded
+			3. All other endpoints require an authenticated user
+			4. Unauthenticated users are re-directed to the home page
+		 */
 		// @formatter:off
 		http.antMatcher("/**").authorizeRequests().antMatchers("/", "/login**", "/webjars/**").permitAll().anyRequest()
 				.authenticated().and().exceptionHandling()
@@ -85,10 +92,18 @@ public class SocialApplication extends WebSecurityConfigurerAdapter {
 	@Configuration
 	@EnableResourceServer
 	protected static class ResourceServerConfiguration extends ResourceServerConfigurerAdapter {
+		/*
+		* The "/me" path can now be protected with the access token by declaring that our app is a Resource Server
+		* (as well as an Authorization Server). We create a new configuration class (as n inner class in the main app,
+		* but it could also be split out into a separate standalone class):
+		* */
+
 		@Override
 		public void configure(HttpSecurity http) throws Exception {
 			// @formatter:off
-			http.antMatcher("/me").authorizeRequests().anyRequest().authenticated();
+			http.antMatcher("/me")
+					.authorizeRequests()
+					.anyRequest().authenticated();
 			// @formatter:on
 		}
 	}

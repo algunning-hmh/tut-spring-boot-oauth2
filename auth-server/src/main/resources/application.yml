@@ -1,3 +1,4 @@
+# Interal Provider
 security:
   oauth2:
     client:
@@ -6,6 +7,7 @@ security:
       scope: read,write
       auto-approve-scopes: '.*'
 
+# External Provider
 facebook:
   client:
     clientId: 233668646673605
@@ -17,6 +19,8 @@ facebook:
     clientAuthenticationScheme: form
   resource:
     userInfoUri: https://graph.facebook.com/me
+
+# External Provider
 github:
   client:
     clientId: bd1c0a783ccdd1c9b9e4

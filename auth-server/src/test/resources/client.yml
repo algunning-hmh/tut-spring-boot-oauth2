@@ -1,6 +1,12 @@
 server:
   port: 9999
   context-path: /client
+  # http://localhost:9999/client
+  # will take you to auth server, and once you have authenticated with social provided of choice,
+  # you will be redirected back to client app.
+  #
+  # The context path has to be explicit if you are running both the client and the auth server on localhost,
+  # otherwise the cookie paths clash and the two apps cannot agree on a session identifier.
 security:
   oauth2:
     client:
